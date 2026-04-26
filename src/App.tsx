@@ -809,7 +809,7 @@ export default function App() {
                              <div className="nasa-panel p-0 bg-black border-2 border-white/5 shadow-2xl flex-1 min-h-[350px]">
                                                                  <EntropyDistribution 
                                     entropyData={clayTerrain.length > 0 ? clayTerrain : []} 
-                                    isLocked={currentAppState === 'ENCRYPTED'}
+                                    isLocked={currentAppState === 'ENCRYPTED' || currentAppState === 'DECRYPTED'}
                                  />
                              </div>
                           </div>

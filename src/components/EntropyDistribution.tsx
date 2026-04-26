@@ -110,7 +110,7 @@ const EntropyDistribution: React.FC<EntropyDistributionProps> = ({ entropyData, 
     <div className="nasa-panel p-[var(--spacing-phi-2)] flex flex-col gap-2 relative bg-black border-2 border-white/10 h-auto min-h-[350px] sm:min-h-[400px] w-full max-w-5xl md:aspect-[4/3] max-h-[90vh] mx-auto overflow-visible shadow-[0_0_20px_rgba(0,0,0,0.5)]">
       <div className="flex justify-between items-center border-b border-white/20 pb-1 mb-1 relative z-[40]">
         <div className="flex items-center gap-1.5 font-mono">
-          <div className={`w-1 h-3 shadow-[0_0_8px_currentColor] ${!hasData ? 'bg-white/20' : isLocked ? 'bg-nasa-red' : 'bg-telemetry-green'}`} />
+          <div className={`w-1 h-3 shadow-[0_0_8px_currentColor] ${!hasData ? 'bg-white/20' : isLocked ? 'bg-telemetry-green' : 'bg-nasa-red'}`} />
           <span className="text-[10px] text-white/70 uppercase tracking-widest whitespace-nowrap">
             SIGNALS: SPECTRAL_FIELD_SCAN [Σ-1024]
           </span>
@@ -143,9 +143,9 @@ const EntropyDistribution: React.FC<EntropyDistributionProps> = ({ entropyData, 
           >
             <Layers size={12} />
           </button>
-          <span className="text-[8px] font-mono text-pink-500 animate-pulse ml-2 px-1 border border-pink-500/20">PK_MODE</span>
+          <span className="text-[8px] font-mono text-telemetry-green animate-pulse ml-2 px-1 border border-telemetry-green/20">PK_MODE</span>
         </div>
-        <span className={`text-[8px] font-mono uppercase ${!hasData ? 'text-white/20' : isLocked ? 'text-nasa-red' : 'text-telemetry-green'}`}>
+        <span className={`text-[8px] font-mono uppercase ${!hasData ? 'text-white/20' : isLocked ? 'text-telemetry-green' : 'text-nasa-red'}`}>
           {!hasData ? 'Orthographic_Scan: STANDBY' : isLocked ? 'Orthographic_Scan: LOCKED' : 'Orthographic_Scan: DECRYPTED'}
         </span>
       </div>
@@ -200,46 +200,78 @@ const EntropyDistribution: React.FC<EntropyDistributionProps> = ({ entropyData, 
             </div>
           </div>
         ) : viewMode === 'WATERFALL' ? (
-          <div className="w-full h-full border border-white/5 relative">
+          <div 
+            className="w-full h-full border border-white/5 relative cursor-pointer group"
+            onClick={() => setExpandedIndex(1)} // Default to node 1 diagnostic for the main view
+           >
             <SpectralWaterfall 
               data={entropyData.slice(0, 64).map(v => (v + 2) / 4)} 
               isLocked={isLocked}
             />
+            <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+              <Maximize2 size={12} className="text-telemetry-green" />
+            </div>
           </div>
         ) : (
           <div className="grid grid-cols-3 grid-rows-3 gap-2 h-full w-full">
             {NODE_CONFIG.map((node) => {
               const chunk = getTransformedChunk(node.id);
-              const activeColor = deriveColor(chunk, node.id);
               
               return (
                 <motion.div 
                   key={node.id}
-                  whileHover={{ scale: 1.02, backgroundColor: 'rgba(255, 0, 255, 0.08)' }}
+                  whileHover={{ scale: 1.02, backgroundColor: 'rgba(0, 255, 65, 0.05)', borderColor: 'rgba(0, 255, 65, 0.4)' }}
                   onClick={(e) => {
                     e.stopPropagation();
                     setExpandedIndex(node.id);
                   }}
-                  className="relative cursor-pointer group border border-white/10 bg-white/5 flex flex-col overflow-hidden min-h-0"
+                  className="relative cursor-pointer group border border-white/10 bg-black/40 flex flex-col overflow-hidden min-h-0 z-20 transition-all duration-300 pointer-events-auto"
                 >
-                  <div className="flex-1 min-h-0 relative pointer-events-none">
+                  {/* Waveform Background */}
+                  <div className="absolute inset-0 pointer-events-none opacity-100">
                     <SpectralWaterfall 
                       data={chunk.map(v => (v + 2) / 4)} 
                       isLocked={isLocked}
                     />
                   </div>
-                  
-                  <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                    <Maximize2 size={8} className="text-pink-500" />
-                  </div>
 
-                  <div className="absolute bottom-1 left-1 right-1 flex justify-between items-end pointer-events-none z-10">
-                    <span className="text-[6px] font-mono text-white/40 uppercase truncate bg-black/60 px-1">{node.label}</span>
-                    {hasData && (
-                      <span className="text-[5px] font-mono text-pink-500/60 leading-none bg-black/60 px-1">
-                         {node.math.split('\n')[1]}
-                      </span>
-                    )}
+                  {/* Clean Minimal HUD */}
+                  <div className="relative flex-1 p-2 flex flex-col justify-between pointer-events-none">
+                    <div className="flex justify-between items-start">
+                      <div className="flex items-center gap-1.5">
+                        {/* Green Node / Activity Light */}
+                        <div className="relative">
+                          <motion.div 
+                            animate={{ scale: [1, 1.5, 1], opacity: [0.8, 1, 0.8] }}
+                            transition={{ duration: 2, repeat: Infinity }}
+                            className="w-1.5 h-1.5 rounded-full bg-telemetry-green shadow-[0_0_8px_#00FF41]" 
+                          />
+                          <div className="absolute inset-0 w-1.5 h-1.5 rounded-full bg-telemetry-green animate-ping opacity-30" />
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-[6px] font-mono text-white/80 uppercase font-bold tracking-tighter">SIG_NODE_{node.id}</span>
+                          <span className="text-[5px] font-mono text-telemetry-green/60">ACTIVE::TRACING</span>
+                        </div>
+                      </div>
+                      <div className="text-[7px] font-mono text-white/20 uppercase tracking-widest bg-black/40 px-1">
+                        0x{Math.floor(Math.random() * 255).toString(16).toUpperCase()}
+                      </div>
+                    </div>
+
+                    <div className="flex justify-between items-end">
+                      <div className="bg-black/60 px-1 border-l border-telemetry-green/40">
+                         <span className="text-[8px] font-mono text-white uppercase font-bold tracking-tighter">{node.label}</span>
+                      </div>
+                      <div className="flex flex-col items-end">
+                         <span className="text-[5px] font-mono text-white/40 uppercase">PK-MODE</span>
+                         <span className="text-[6px] font-mono text-telemetry-green font-bold">READY</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Hover Decoration */}
+                  <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                    <Maximize2 size={8} className="text-telemetry-green" />
                   </div>
                 </motion.div>
               );
@@ -254,19 +286,25 @@ const EntropyDistribution: React.FC<EntropyDistributionProps> = ({ entropyData, 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[10000] flex items-center justify-center p-2 sm:p-4 bg-black/95 backdrop-blur-xl"
-            onClick={() => setExpandedIndex(null)}
+            className="fixed inset-0 z-[1000000] flex items-center justify-center p-2 sm:p-8 bg-black/98 backdrop-blur-2xl"
+            style={{ pointerEvents: 'auto' }}
+            onClick={(e) => {
+               e.stopPropagation();
+               setExpandedIndex(null);
+            }}
           >
             <motion.div 
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 20 }}
               onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-5xl h-fit max-h-[98vh] bg-black border-2 border-pink-500/50 relative overflow-hidden shadow-[0_0_100px_rgba(255,0,255,0.4)] flex flex-col rounded-sm"
+              className="w-full max-w-5xl h-fit max-h-[95vh] bg-black border-2 border-telemetry-green/50 relative overflow-hidden shadow-[0_0_100px_rgba(0,255,65,0.2)] flex flex-col rounded-sm"
             >
-              <div className="h-10 border-b border-pink-500/30 flex items-center justify-between px-4 bg-pink-500/10 flex-shrink-0">
+              {/* Scanline Detail */}
+              <div className="absolute inset-0 pointer-events-none opacity-10 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[length:100%_2px,3px_100%]" />
+              <div className="h-10 border-b border-telemetry-green/30 flex items-center justify-between px-4 bg-telemetry-green/10 flex-shrink-0">
                 <div className="flex items-center gap-3 overflow-hidden">
-                  <Activity size={16} className="text-pink-500 flex-shrink-0" />
+                  <Activity size={16} className="text-telemetry-green flex-shrink-0" />
                   <span className="font-mono text-[10px] md:text-sm text-white uppercase font-bold tracking-[0.2em] truncate">
                     CHANNEL_DIAGNOSTIC: {expandedIndex && NODE_CONFIG[expandedIndex-1].label}
                   </span>
@@ -274,13 +312,13 @@ const EntropyDistribution: React.FC<EntropyDistributionProps> = ({ entropyData, 
                 <div className="flex items-center gap-4">
                   <button 
                     onClick={() => setShowInfo(!showInfo)}
-                    className={`transition-colors p-1 rounded-full ${showInfo ? 'text-pink-500 bg-pink-500/20' : 'text-white/40 hover:text-pink-500'}`}
+                    className={`transition-colors p-1 rounded-full ${showInfo ? 'text-telemetry-green bg-telemetry-green/20' : 'text-white/40 hover:text-telemetry-green'}`}
                   >
                     <HelpCircle size={18} />
                   </button>
                   <button 
                     onClick={() => setExpandedIndex(null)}
-                    className="text-white/40 hover:text-pink-500 transition-colors p-1"
+                    className="text-white/40 hover:text-telemetry-green transition-colors p-1"
                   >
                     <X size={24} />
                   </button>
@@ -288,32 +326,32 @@ const EntropyDistribution: React.FC<EntropyDistributionProps> = ({ entropyData, 
               </div>
 
               <div className="flex-1 p-4 md:p-8 overflow-y-auto custom-scrollbar flex flex-col md:flex-row gap-6">
-                <div className="flex-[3] min-h-[300px] md:min-h-0 bg-white/2 border border-pink-500/20 relative rounded overflow-hidden">
+                <div className="flex-[3] min-h-[300px] md:min-h-0 bg-white/2 border border-telemetry-green/20 relative rounded overflow-hidden">
                   <div className="absolute inset-0">
                     <SpectralWaterfall 
-                      data={getTransformedChunk(expandedIndex).slice(0, 64).map(v => (v + 1) / 3)} 
+                      data={getTransformedChunk(expandedIndex).map(v => (v + 2) / 4)} 
                       isLocked={isLocked}
                     />
                   </div>
                   <div className="absolute top-4 left-4 flex flex-col gap-1 pointer-events-none z-10">
-                    <span className="text-[8px] font-mono text-pink-500/80 bg-black/80 px-2 py-0.5 border border-pink-500/20 uppercase">Spectral_Manifold: ACTIVE</span>
+                    <span className="text-[8px] font-mono text-telemetry-green/80 bg-black/80 px-2 py-0.5 border border-telemetry-green/20 uppercase">Spectral_Manifold: ACTIVE</span>
                     <span className="text-[10px] font-mono text-white/50 tracking-tighter">DIAGNOSTIC_COORDS: {Math.random().toFixed(4)}, {Math.random().toFixed(4)}</span>
                   </div>
                 </div>
 
                 <div className="flex-1 flex flex-col gap-6 min-w-[260px]">
                   <section className="space-y-3">
-                    <div className="flex items-center gap-2 border-b border-pink-500/30 pb-1">
-                      <Cpu size={14} className="text-pink-500" />
+                    <div className="flex items-center gap-2 border-b border-telemetry-green/30 pb-1">
+                      <Cpu size={14} className="text-telemetry-green" />
                       <h4 className="text-[10px] font-mono font-bold text-white uppercase tracking-wider">Logic Substrate</h4>
                     </div>
-                    <pre className="text-[10px] font-mono text-pink-400 bg-pink-500/5 p-3 rounded border border-pink-500/10 whitespace-pre-wrap leading-relaxed">
+                    <pre className="text-[10px] font-mono text-telemetry-green bg-telemetry-green/5 p-3 rounded border border-telemetry-green/10 whitespace-pre-wrap leading-relaxed">
                       {expandedIndex && NODE_CONFIG[expandedIndex-1].math}
                     </pre>
                   </section>
 
                   <section className="space-y-3 flex-1">
-                     <div className="flex items-center gap-2 border-b border-pink-500/30 pb-1">
+                     <div className="flex items-center gap-2 border-b border-telemetry-green/30 pb-1">
                       <TrendingUp size={14} className="text-telemetry-green" />
                       <h4 className="text-[10px] font-mono font-bold text-white uppercase tracking-wider">Stability Analysis</h4>
                     </div>
@@ -344,7 +382,7 @@ const EntropyDistribution: React.FC<EntropyDistributionProps> = ({ entropyData, 
 
                   <button 
                     onClick={() => setExpandedIndex(null)}
-                    className="mt-auto py-3 bg-pink-500/10 hover:bg-pink-500/20 text-pink-500 border border-pink-500/50 text-[10px] font-mono font-bold uppercase tracking-[0.3em] transition-all"
+                    className="mt-auto py-3 bg-telemetry-green/10 hover:bg-telemetry-green/20 text-telemetry-green border border-telemetry-green/50 text-[10px] font-mono font-bold uppercase tracking-[0.3em] transition-all"
                   >
                     Close Diagnostic
                   </button>
