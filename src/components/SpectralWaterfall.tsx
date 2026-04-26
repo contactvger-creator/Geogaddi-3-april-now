@@ -44,96 +44,89 @@ export const SpectralWaterfall: React.FC<SpectralWaterfallProps> = ({
     const render = (time: number) => {
       ctx.clearRect(0, 0, width, height);
 
-      // Add new data to history, keeping it constrained
       if (data && data.length > 0) {
         history.unshift([...data]);
         if (history.length > maxHistory) history.pop();
       }
 
-      const perspectiveX = width * 0.2;
-      const perspectiveY = height * 0.2;
-      const drawWidth = width * 0.7;
-      const drawHeight = height * 0.7;
+      const perspectiveX = width * 0.25;
+      const perspectiveY = height * 0.15;
+      const drawWidth = width * 0.65;
+      const drawHeight = height * 0.6;
       
-      const offsetX = (width - drawWidth) / 2;
+      const offsetX = (width - drawWidth) / 2 + perspectiveX * 0.5;
       const offsetY = (height - drawHeight) / 2 + perspectiveY;
 
       ctx.save();
       
-      // Draw grid floor for that orthographic look
+      // Draw grid floor
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
       ctx.lineWidth = 1;
       for (let i = 0; i <= 10; i++) {
         const hRatio = i / 10;
-        // Horizontal lines
-        ctx.beginPath();
         const yBase = offsetY + hRatio * drawHeight;
-        const xModLeft = hRatio * perspectiveX;
-        const xModRight = (1 - hRatio) * perspectiveX;
+        const xOffset = hRatio * perspectiveX;
+        const yOffset = hRatio * perspectiveY;
         
-        ctx.moveTo(offsetX - xModLeft, yBase - hRatio * perspectiveY);
-        ctx.lineTo(offsetX + drawWidth - xModLeft, yBase - hRatio * perspectiveY);
+        ctx.beginPath();
+        ctx.moveTo(offsetX - xOffset, yBase - yOffset);
+        ctx.lineTo(offsetX + drawWidth - xOffset, yBase - yOffset);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(offsetX - (i/10 * perspectiveX) + (i/10 * drawWidth), offsetY - (i/10 * perspectiveY));
+        ctx.lineTo(offsetX - perspectiveX + (i/10 * drawWidth), offsetY + drawHeight - perspectiveY);
         ctx.stroke();
       }
 
-      // Draw spectral lines from back to front
+      // Heatmap color function (Blue -> Cyan -> Green -> Yellow -> Red)
+      const getHeatmapColor = (val: number, alpha: number) => {
+        if (isLocked) return `rgba(255, ${Math.floor(51 * (1-val))}, 0, ${alpha})`;
+        
+        if (val < 0.25) return `rgba(0, ${Math.floor(val * 4 * 255)}, 255, ${alpha})`;
+        if (val < 0.5) return `rgba(0, 255, ${Math.floor((1 - (val - 0.25) * 4) * 255)}, ${alpha})`;
+        if (val < 0.75) return `rgba(${Math.floor((val - 0.5) * 4 * 255)}, 255, 0, ${alpha})`;
+        return `rgba(255, ${Math.floor((1 - (val - 0.75) * 4) * 255)}, 0, ${alpha})`;
+      };
+
+      // Draw spectral lines back to front
       for (let h = history.length - 1; h >= 0; h--) {
         const line = history[h];
         const hRatio = 1 - (h / history.length);
-        const zAlpha = Math.pow(hRatio, 2);
+        const zAlpha = Math.pow(hRatio, 1.5);
         
         const lineYBase = offsetY + hRatio * drawHeight;
         const lineXOffset = hRatio * perspectiveX;
         const lineYOffset = hRatio * perspectiveY;
         
-        ctx.beginPath();
-        ctx.strokeStyle = isLocked ? `rgba(252, 61, 33, ${zAlpha * 0.8})` : `rgba(0, 255, 65, ${zAlpha * 0.8})`;
-        ctx.lineWidth = 1.5;
+        // Draw the heatmap line segments
+        for (let i = 0; i < line.length - 1; i++) {
+          const val1 = line[i] || 0;
+          const val2 = line[i+1] || 0;
+          const avgVal = (val1 + val2) / 2;
 
-        for (let i = 0; i < line.length; i++) {
-          const val = line[i] || 0;
-          const x = offsetX - lineXOffset + (i / (line.length - 1)) * drawWidth;
-          const y = lineYBase - lineYOffset - val * (drawHeight * 0.4);
+          const x1 = offsetX - lineXOffset + (i / (line.length - 1)) * drawWidth;
+          const y1 = lineYBase - lineYOffset - val1 * (drawHeight * 0.5);
+          const x2 = offsetX - lineXOffset + ((i + 1) / (line.length - 1)) * drawWidth;
+          const y2 = lineYBase - lineYOffset - val2 * (drawHeight * 0.5);
 
-          if (i === 0) ctx.moveTo(x, y);
-          else ctx.lineTo(x, y);
-        }
-        ctx.stroke();
+          ctx.beginPath();
+          ctx.strokeStyle = getHeatmapColor(avgVal, zAlpha);
+          ctx.lineWidth = 1.5;
+          ctx.moveTo(x1, y1);
+          ctx.lineTo(x2, y2);
+          ctx.stroke();
 
-        // Fill area under the line for solid heat-map effect
-        ctx.lineTo(offsetX - lineXOffset + drawWidth, lineYBase - lineYOffset);
-        ctx.lineTo(offsetX - lineXOffset, lineYBase - lineYOffset);
-        ctx.closePath();
-        
-        // Gradient fill
-        const gradient = ctx.createLinearGradient(0, lineYBase - lineYOffset - drawHeight * 0.4, 0, lineYBase - lineYOffset);
-        gradient.addColorStop(0, isLocked ? `rgba(252, 61, 33, ${zAlpha * 0.3})` : `rgba(0, 255, 65, ${zAlpha * 0.3})`);
-        gradient.addColorStop(1, 'rgba(0,0,0,0)');
-        ctx.fillStyle = gradient;
-        ctx.fill();
-        
-        // Add "peaks" with warmer colors if they cross a threshold
-        ctx.beginPath();
-        ctx.lineWidth = 2;
-        let hasPeak = false;
-        for (let i = 0; i < line.length; i++) {
-          const val = line[i] || 0;
-          if (val > 0.6) {
-            const x = offsetX - lineXOffset + (i / (line.length - 1)) * drawWidth;
-            const y = lineYBase - lineYOffset - val * (drawHeight * 0.4);
-            if (!hasPeak) {
-              ctx.moveTo(x, y);
-              hasPeak = true;
-            } else {
-              ctx.lineTo(x, y);
-            }
-          } else {
-            hasPeak = false;
+          // Fill column connecting to baseline
+          if (h % 2 === 0) { // Thinner fill for performance
+            ctx.beginPath();
+            ctx.fillStyle = getHeatmapColor(avgVal, zAlpha * 0.15);
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y2);
+            ctx.lineTo(x2, lineYBase - lineYOffset);
+            ctx.lineTo(x1, lineYBase - lineYOffset);
+            ctx.fill();
           }
-        }
-        if (hasPeak) {
-           ctx.strokeStyle = '#FF3300';
-           ctx.stroke();
         }
       }
 

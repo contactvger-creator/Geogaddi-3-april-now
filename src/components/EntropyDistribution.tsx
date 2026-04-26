@@ -291,14 +291,15 @@ const EntropyDistribution: React.FC<EntropyDistributionProps> = ({ entropyData, 
 
               <div className="flex-1 p-4 md:p-8 overflow-y-auto custom-scrollbar flex flex-col md:flex-row gap-6">
                 <div className="flex-[3] min-h-[300px] md:min-h-0 bg-white/2 border border-pink-500/20 relative rounded overflow-hidden">
-                  <RuttEtraScan 
-                    data={getTransformedChunk(expandedIndex)} 
-                    color={deriveColor(getTransformedChunk(expandedIndex), expandedIndex)} 
-                    intensity={1.2} 
-                  />
-                  <div className="absolute top-4 left-4 flex flex-col gap-1 pointer-events-none">
-                    <span className="text-[8px] font-mono text-pink-500/80 bg-black/80 px-2 py-0.5 border border-pink-500/20">LIVE_TELEMETRY</span>
-                    <span className="text-[10px] font-mono text-white/50 tracking-tighter">COORDS: {Math.random().toFixed(4)}, {Math.random().toFixed(4)}</span>
+                  <div className="absolute inset-0">
+                    <SpectralWaterfall 
+                      data={getTransformedChunk(expandedIndex).slice(0, 64).map(v => (v + 1) / 3)} 
+                      isLocked={isLocked}
+                    />
+                  </div>
+                  <div className="absolute top-4 left-4 flex flex-col gap-1 pointer-events-none z-10">
+                    <span className="text-[8px] font-mono text-pink-500/80 bg-black/80 px-2 py-0.5 border border-pink-500/20 uppercase">Spectral_Manifold: ACTIVE</span>
+                    <span className="text-[10px] font-mono text-white/50 tracking-tighter">DIAGNOSTIC_COORDS: {Math.random().toFixed(4)}, {Math.random().toFixed(4)}</span>
                   </div>
                 </div>
 
