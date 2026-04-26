@@ -68,8 +68,9 @@ export const SpectralWaterfall: React.FC<SpectralWaterfallProps> = ({
       // Page D HUD Style Header
       ctx.font = '6px monospace';
       ctx.fillStyle = '#00FF41';
-      ctx.globalAlpha = 0.3;
+      ctx.globalAlpha = 0.8; // Increased from 0.3 for 100% green vibe
       ctx.fillText('*** PAGE D READY ***', offsetX + drawWidth/2 - 30, offsetY - 20);
+      ctx.globalAlpha = 1.0;
 
       // Draw grid floor
       ctx.strokeStyle = 'rgba(0, 255, 65, 0.1)';
@@ -95,7 +96,7 @@ export const SpectralWaterfall: React.FC<SpectralWaterfallProps> = ({
       for (let h = history.length - 1; h >= 0; h--) {
         const line = history[h];
         const hRatio = 1 - (h / history.length);
-        const zAlpha = 0.5 + 0.5 * Math.pow(hRatio, 1.2); // Base 50% opacity, front at 100%
+        const zAlpha = (h === 0) ? 1.0 : (0.4 + 0.6 * Math.pow(hRatio, 1.5)); // Front is 100%
         
         const lineYBase = offsetY + hRatio * drawHeight;
         const lineXOffset = hRatio * perspectiveX;
@@ -103,7 +104,7 @@ export const SpectralWaterfall: React.FC<SpectralWaterfallProps> = ({
         
         ctx.beginPath();
         ctx.strokeStyle = isLocked ? `rgba(0, 255, 65, ${zAlpha})` : `rgba(255, 51, 0, ${zAlpha})`;
-        ctx.lineWidth = 1.4;
+        ctx.lineWidth = h === 0 ? 2 : 1.4;
 
         for (let i = 0; i < line.length; i++) {
           const val = line[i] || 0;
@@ -115,26 +116,28 @@ export const SpectralWaterfall: React.FC<SpectralWaterfallProps> = ({
         }
         ctx.stroke();
 
-        // Draw "nodes" at specific points on the waveform for algorithmic detail
-        if (h % 4 === 0) { // Every few lines to avoid clutter
+        // Draw Prominent Nodes at peaks
+        if (h === 0) {
           for (let i = 0; i < line.length; i++) {
             const val = line[i] || 0;
-            // Key areas: peaks and certain fixed indices
-            if (val > 0.7 || (i % 8 === 0 && val > 0.4)) {
+            if (val > 0.6 || (i % 12 === 0 && val > 0.4)) {
               const x = offsetX - lineXOffset + (i / (line.length - 1)) * drawWidth;
               const y = lineYBase - lineYOffset - val * (drawHeight * 0.45);
               
+              // Outer Glow
               ctx.beginPath();
-              const nodeAlpha = (h === 0) ? 1 : zAlpha * 0.5;
-              ctx.fillStyle = isLocked ? `rgba(0, 255, 65, ${nodeAlpha})` : `rgba(255, 51, 0, ${nodeAlpha})`;
-              ctx.arc(x, y, h === 0 ? 2 : 1, 0, Math.PI * 2);
+              ctx.shadowBlur = 15;
+              ctx.shadowColor = isLocked ? '#00FF41' : '#FF3300';
+              ctx.fillStyle = isLocked ? '#00FF41' : '#FF3300';
+              ctx.arc(x, y, 3, 0, Math.PI * 2);
               ctx.fill();
               
-              if (h === 0) {
-                ctx.strokeStyle = '#FFFFFF';
-                ctx.lineWidth = 0.5;
-                ctx.stroke();
-              }
+              // Inner Core
+              ctx.beginPath();
+              ctx.fillStyle = '#FFFFFF';
+              ctx.arc(x, y, 1.2, 0, Math.PI * 2);
+              ctx.fill();
+              ctx.shadowBlur = 0;
             }
           }
         }
@@ -150,7 +153,7 @@ export const SpectralWaterfall: React.FC<SpectralWaterfallProps> = ({
 
       // UI Labels
       ctx.font = '5px monospace';
-      ctx.fillStyle = 'rgba(0, 255, 65, 0.4)';
+      ctx.fillStyle = 'rgba(0, 255, 65, 0.9)'; // Increased from 0.4
       ctx.fillText('F:MANIFOLD', offsetX + drawWidth - 10, offsetY + drawHeight + 5);
       ctx.fillText('Σ:AMP', offsetX - perspectiveX - 5, offsetY - perspectiveY);
       ctx.fillText('T:ms', offsetX - 5, offsetY + drawHeight + 10);
