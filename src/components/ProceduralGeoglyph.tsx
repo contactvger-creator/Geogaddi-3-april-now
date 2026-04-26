@@ -1,6 +1,7 @@
-import React, { useEffect, useRef } from 'react';
-import { Download } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { Download, HelpCircle, X } from 'lucide-react';
 import { generateGeoglyphSVG } from '../lib/geoglyph-io';
+import { motion, AnimatePresence } from 'motion/react';
 
 interface ProceduralGeoglyphProps {
   seed: number[];
@@ -10,6 +11,7 @@ interface ProceduralGeoglyphProps {
 
 const ProceduralGeoglyph: React.FC<ProceduralGeoglyphProps> = ({ seed, payload, size = 300 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [showInfo, setShowInfo] = useState(false);
 
   const downloadSVG = () => {
     if (!payload) return;
@@ -186,7 +188,45 @@ const ProceduralGeoglyph: React.FC<ProceduralGeoglyphProps> = ({ seed, payload, 
   }, [seed, size]);
 
   return (
-    <div className="nasa-panel p-[var(--spacing-phi-3)] flex flex-col items-center justify-center min-h-[300px]">
+    <div className="nasa-panel p-[var(--spacing-phi-3)] flex flex-col items-center justify-center min-h-[300px] relative">
+      <div className="absolute top-[var(--spacing-phi-2)] left-[var(--spacing-phi-2)]">
+        <button 
+          onClick={() => setShowInfo(!showInfo)}
+          className="text-white/20 hover:text-royal-blue transition-colors"
+        >
+          <HelpCircle size={14} />
+        </button>
+      </div>
+      <AnimatePresence>
+        {showInfo && (
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            className="absolute inset-4 z-50 bg-black/95 border border-royal-blue/30 p-4 shadow-2xl overflow-y-auto custom-scrollbar"
+          >
+            <div className="flex justify-between items-start mb-3 border-b border-white/10 pb-2">
+              <span className="text-royal-blue font-mono font-bold uppercase text-[10px] tracking-widest">Geoglyph Fingerprint</span>
+              <button onClick={() => setShowInfo(false)} className="text-white/40 hover:text-white"><X size={14}/></button>
+            </div>
+            <p className="text-[10px] font-mono text-white/70 leading-relaxed">
+              A 1:1 visual mapping of the message entropy. The <span className="text-royal-blue">Royal Blue Rings</span> represent the hash depth, 
+              while the <span className="text-red-500">Radial Spine spikes</span> reveal local bit density. 
+              Each Geoglyph is unique to its specific ciphertext/password combination.
+            </p>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+               <div className="p-2 bg-white/5 border border-white/10">
+                 <p className="text-[8px] text-white/30 uppercase">Download</p>
+                 <p className="text-[9px] text-white/50">Vector SVG available for cold storage.</p>
+               </div>
+               <div className="p-2 bg-white/5 border border-white/10">
+                 <p className="text-[8px] text-white/30 uppercase">Integrity</p>
+                 <p className="text-[9px] text-white/50">SHA3-derived procedural seeds.</p>
+               </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
       <div className="absolute top-[var(--spacing-phi-2)] right-[var(--spacing-phi-2)] flex flex-col items-end">
         <div className="text-[10px] font-mono text-white/40 uppercase tracking-widest text-right">
           Channel 4 Fingerprint<br />[SHA3-GEOGLYPH]

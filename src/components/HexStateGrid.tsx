@@ -1,5 +1,6 @@
-import React, { useMemo } from 'react';
-import { motion } from 'motion/react';
+import React, { useMemo, useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { HelpCircle, X } from 'lucide-react';
 
 interface HexStateGridProps {
   input: string;
@@ -7,6 +8,7 @@ interface HexStateGridProps {
 }
 
 export default function HexStateGrid({ input, maxCells = 48 }: HexStateGridProps) {
+  const [showInfo, setShowInfo] = useState(false);
   // Convert input string to hex-like fragments or byte values
   const data = useMemo(() => {
     const bytes = input.split('').map(c => c.charCodeAt(0));
@@ -97,9 +99,36 @@ export default function HexStateGrid({ input, maxCells = 48 }: HexStateGridProps
           <div className="flex items-center gap-1.5">
             <div className="w-1 h-3 bg-amber shadow-[0_0_8px_#ff9500]" />
             <span className="text-[11px] font-mono text-white font-bold uppercase tracking-wider">McCanney Field Matrix</span>
+            <button 
+              onClick={() => setShowInfo(!showInfo)}
+              className="text-white/20 hover:text-amber transition-colors ml-1"
+            >
+              <HelpCircle size={10} />
+            </button>
           </div>
           <span className="text-[8px] font-mono text-white/40 uppercase">Mapping: GF(2^8)</span>
         </div>
+
+        <AnimatePresence>
+          {showInfo && (
+            <motion.div 
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="absolute top-10 left-4 right-4 z-50 bg-black/95 border border-amber/30 p-3 shadow-2xl rounded-sm text-[9px] font-mono leading-relaxed pointer-events-auto"
+            >
+              <div className="flex justify-between items-start mb-2">
+                <span className="text-amber font-bold uppercase tracking-tighter">Matrix Analysis</span>
+                <button onClick={() => setShowInfo(false)} className="text-white/40 hover:text-white"><X size={12}/></button>
+              </div>
+              <p className="text-white/70">
+                A Galois Field mapping of the input buffer. 
+                Each <span className="text-amber">Amber Hexagon</span> represents a byte-cell transition. 
+                The <span className="text-royal-blue font-bold">SHA3-v2</span> engine scrambles these values across the McCanney Prime Field before permutation.
+              </p>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <div className="flex-1" />
 

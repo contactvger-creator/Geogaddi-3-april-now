@@ -1,11 +1,13 @@
-import React, { useMemo } from 'react';
-import { motion } from 'motion/react';
+import React, { useMemo, useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { HelpCircle, X } from 'lucide-react';
 
 interface EntropyHeatmapProps {
   input: string;
 }
 
 const EntropyHeatmap: React.FC<EntropyHeatmapProps> = ({ input }) => {
+  const [showInfo, setShowInfo] = useState(false);
   const grid = useMemo(() => {
     // Generate a 12x12 grid of "complexity cells"
     const cells = [];
@@ -68,9 +70,36 @@ const EntropyHeatmap: React.FC<EntropyHeatmapProps> = ({ input }) => {
           <div className="flex items-center gap-1.5">
             <div className="w-1 h-3 bg-nasa-red shadow-[0_0_8px_#fc3d21]" />
             <span className="text-[11px] font-mono text-white font-bold uppercase tracking-wider">Entropy Heatmap HUD</span>
+            <button 
+              onClick={() => setShowInfo(!showInfo)}
+              className="text-white/20 hover:text-royal-blue transition-colors ml-1"
+            >
+              <HelpCircle size={10} />
+            </button>
           </div>
           <span className="text-[8px] font-mono text-telemetry-green uppercase animate-pulse font-bold">● SCANNING</span>
         </div>
+
+        <AnimatePresence>
+          {showInfo && (
+            <motion.div 
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="absolute top-10 left-4 right-4 z-50 bg-black/95 border border-royal-blue/30 p-3 shadow-2xl rounded-sm text-[9px] font-mono leading-relaxed pointer-events-auto"
+            >
+              <div className="flex justify-between items-start mb-2">
+                <span className="text-royal-blue font-bold uppercase tracking-tighter">Heatmap Diagnostics</span>
+                <button onClick={() => setShowInfo(false)} className="text-white/40 hover:text-white"><X size={12}/></button>
+              </div>
+              <p className="text-white/70">
+                Measures the <span className="text-royal-blue">Complexity Matrix</span> of the input stream. 
+                <span className="text-nasa-red font-bold"> Red Strobe</span> indicates high password strength / variety, 
+                while <span className="text-nasa-blue">Blue Shadowing</span> represents predictable patterns.
+              </p>
+            </motion.div>
+          )}
+        </AnimatePresence>
         
         <div className="flex-1" />
         

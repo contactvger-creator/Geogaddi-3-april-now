@@ -1,5 +1,6 @@
-import React, { useEffect, useRef, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useEffect, useRef, useMemo, useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { HelpCircle, X } from 'lucide-react';
 
 interface HexStageProps {
   state: 0 | 1 | 2; // Write (blank), Encrypted (shielded), Decrypted (unicursal)
@@ -9,6 +10,7 @@ interface HexStageProps {
 
 const HexStage: React.FC<HexStageProps> = ({ state, phase = 0, clayTerrain = [0, 0, 0, 0, 0, 0] }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [showInfo, setShowInfo] = useState(false);
   const size = 300;
   const center = { x: size / 2, y: size / 2 };
   const radius = size * 0.28; 
@@ -182,10 +184,43 @@ const HexStage: React.FC<HexStageProps> = ({ state, phase = 0, clayTerrain = [0,
   }
 
   return (
-    <div className="nasa-panel flex flex-col items-center justify-center min-h-[350px]">
-      <div className="absolute top-[var(--spacing-phi-2)] left-[var(--spacing-phi-2)] text-[10px] font-mono text-white/40 uppercase tracking-widest">
-        Riemann State Visualizer [v2.1]
+    <div className="nasa-panel flex flex-col items-center justify-center min-h-[350px] relative">
+      <div className="absolute top-[var(--spacing-phi-2)] left-[var(--spacing-phi-2)] flex items-center gap-2">
+        <span className="text-[10px] font-mono text-white/40 uppercase tracking-widest">
+          Riemann State Visualizer [v2.1]
+        </span>
+        <button 
+          onClick={() => setShowInfo(!showInfo)}
+          className="text-white/20 hover:text-royal-blue transition-colors"
+        >
+          <HelpCircle size={12} />
+        </button>
       </div>
+
+      <AnimatePresence>
+        {showInfo && (
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="absolute inset-4 z-50 bg-black/95 border border-royal-blue/30 p-4 shadow-2xl overflow-y-auto custom-scrollbar"
+          >
+            <div className="flex justify-between items-start mb-3 border-b border-white/10 pb-2">
+              <span className="text-royal-blue font-mono font-bold uppercase text-[10px] tracking-widest">Geometric State Logic</span>
+              <button onClick={() => setShowInfo(false)} className="text-white/40 hover:text-white"><X size={14}/></button>
+            </div>
+            <p className="text-[10px] font-mono text-white/70 leading-relaxed space-y-2">
+              The central resonator tracks the mathematical phase of the Riemann manifold.
+              <br /><br />
+              • <span className="text-cyan-400">WRITE:</span> Idle state, substrate initialization.
+              <br />
+              • <span className="text-nasa-red">SHIELDED:</span> Active encryption field. Diagonal bar represents the 256-bit entropy barrier.
+              <br />
+              • <span className="text-telemetry-green">UNICURSAL:</span> Decrypted state. The seven-pointed path represents successful key validation.
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
       
       <canvas 
         ref={canvasRef} 

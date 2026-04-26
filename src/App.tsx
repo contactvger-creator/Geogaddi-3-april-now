@@ -806,7 +806,7 @@ export default function App() {
                                 <Layers size={14} className="text-royal-blue" />
                                 <h4 className="text-[10px] font-mono text-white/40 uppercase tracking-widest">Rutt-Etra Distribution</h4>
                              </div>
-                             <div className="nasa-panel p-0 bg-black overflow-hidden border-2 border-white/5 shadow-2xl flex-1 min-h-[350px]">
+                             <div className="nasa-panel p-0 bg-black border-2 border-white/5 shadow-2xl flex-1 min-h-[350px]">
                                                                  <EntropyDistribution 
                                     entropyData={clayTerrain.length > 0 ? clayTerrain : []} 
                                     isLocked={currentAppState === 'ENCRYPTED'}

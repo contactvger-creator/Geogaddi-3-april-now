@@ -47,72 +47,81 @@ export const RuttEtraScan: React.FC<RuttEtraScanProps> = ({
     const render = (time: number) => {
       ctx.clearRect(0, 0, width, height);
 
-      // Logical color coding applied here
+      // Additive bloom effect
+      ctx.globalCompositeOperation = 'lighter';
+      
+      // Secondary glow pass
       ctx.strokeStyle = color;
-      ctx.lineWidth = 1.0;
-      ctx.globalAlpha = 0.8 * intensity;
+      ctx.lineWidth = 2.0;
+      ctx.globalAlpha = 0.2 * intensity;
+      ctx.shadowBlur = 12 * intensity;
+      ctx.shadowColor = color;
 
       const innerWidth = width - (padding * 2);
       const innerHeight = height - (padding * 2);
       const stepY = innerHeight / (lines - 1);
       const stepX = innerWidth / (pointsPerLine - 1);
 
-      // Bloom/Glow pass
-      ctx.shadowBlur = 6 * intensity;
-      ctx.shadowColor = color;
+      const drawPath = () => {
+        for (let l = 0; l < lines; l++) {
+          ctx.beginPath();
+          for (let p = 0; p < pointsPerLine; p++) {
+            const idx = (l * pointsPerLine + p) % data.length;
+            const val = data[idx] || 0;
+            
+            const displacement = val * (innerHeight * 0.35) * intensity;
+            const x = padding + p * stepX;
+            const tiltOffset = (l - lines / 2) * 4;
+            const drift = Math.sin(time * 0.0005 + l) * 5;
+            const y = padding + (l * stepY) - (displacement * 0.7) + Math.sin(time * 0.002 + p * 0.5 + l) * 2;
 
-      for (let l = 0; l < lines; l++) {
-        const linePoints: {x: number, y: number}[] = [];
-        
-        ctx.beginPath();
-        for (let p = 0; p < pointsPerLine; p++) {
-          const idx = (l * pointsPerLine + p) % data.length;
-          const val = data[idx] || 0;
-          
-          // Displacement logic - constrained more strictly to prevent clipping
-          const displacement = val * (innerHeight * 0.32) * intensity;
-          const x = padding + p * stepX;
-          // Orthographic perspective tilt - shift lines slightly
-          const tiltOffset = (l - lines / 2) * 2;
-          const skewX = (displacement / innerHeight) * 3 + tiltOffset;
-          // Ensure y doesn't drift outside padding
-          const y = padding + (l * stepY) - (displacement * 0.65) + Math.sin(time * 0.001 + p * 0.4 + l * 0.2) * 1.5;
-
-          linePoints.push({ x: x + skewX, y });
-
-          if (p === 0) {
-            ctx.moveTo(x + skewX, y);
-          } else {
-            ctx.lineTo(x + skewX, y);
+            if (p === 0) ctx.moveTo(x + tiltOffset + drift, y);
+            else ctx.lineTo(x + tiltOffset + drift, y);
           }
+          ctx.stroke();
         }
-        ctx.stroke();
+      };
 
-        // Draw point cloud dots at scan line vertices
-        if (intensity > 0.2) {
-          linePoints.forEach((pt, i) => {
-            // Every 2nd point to keep performance but look dense
-            if (i % 2 === 0) {
-              const isPeak = pt.y < (padding + l * stepY - 4);
-              const dotSize = isPeak ? 1.2 : 0.6;
+      // Draw glow pass
+      drawPath();
+
+      // Main sharp pass
+      ctx.shadowBlur = 0;
+      ctx.globalAlpha = 0.9 * intensity;
+      ctx.lineWidth = 1.0;
+      drawPath();
+
+      // Draw point cloud dots at scan line vertices
+      if (intensity > 0.2) {
+        ctx.globalCompositeOperation = 'source-over';
+        for (let l = 0; l < lines; l++) {
+          for (let p = 0; p < pointsPerLine; p++) {
+            if (p % 3 === 0) {
+              const idx = (l * pointsPerLine + p) % data.length;
+              const val = data[idx] || 0;
+              const displacement = val * (innerHeight * 0.35) * intensity;
+              const x = padding + p * stepX;
+              const tiltOffset = (l - lines / 2) * 4;
+              const drift = Math.sin(time * 0.0005 + l) * 5;
+              const y = padding + (l * stepY) - (displacement * 0.7) + Math.sin(time * 0.002 + p * 0.5 + l) * 2;
+
+              const isPeak = displacement > (innerHeight * 0.1);
               ctx.beginPath();
-              ctx.arc(pt.x, pt.y, dotSize, 0, Math.PI * 2);
+              ctx.arc(x + tiltOffset + drift, y, isPeak ? 1.5 : 0.8, 0, Math.PI * 2);
               
-              // Pink or Blue dots as requested, contrasting with waveform
               const baseColor = color.toUpperCase();
-              const isBlueISH = baseColor.includes('00D2FF') || baseColor.includes('0055FF') || baseColor.includes('4B0082');
-              ctx.fillStyle = isBlueISH ? '#FF00FF' : '#00D2FF'; 
+              const isPurpleISH = baseColor.includes('FF007F') || baseColor.includes('9D00FF');
+              ctx.fillStyle = isPurpleISH ? '#00F3FF' : '#FF007F'; 
               ctx.fill();
-              
-              // Special peak glow
+
               if (isPeak && intensity > 0.6) {
-                ctx.shadowBlur = 10;
-                ctx.shadowColor = isBlueISH ? '#FF00FF' : '#00D2FF';
+                ctx.shadowBlur = 8;
+                ctx.shadowColor = ctx.fillStyle;
                 ctx.fill();
                 ctx.shadowBlur = 0;
               }
             }
-          });
+          }
         }
       }
 

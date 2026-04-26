@@ -9,7 +9,9 @@ import {
   Layers,
   ChevronLeft,
   ChevronRight,
-  Info
+  Info,
+  HelpCircle,
+  X
 } from 'lucide-react';
 
 interface Schematic {
@@ -377,6 +379,7 @@ const MerkleTreeSchematic = () => (
 
 export default function TechnicalSchematics() {
   const [activeIdx, setActiveIdx] = useState(0);
+  const [showExplanation, setShowExplanation] = useState(false);
 
   const schematics: Schematic[] = [
     {
@@ -422,14 +425,22 @@ export default function TechnicalSchematics() {
   const prev = () => setActiveIdx((activeIdx - 1 + schematics.length) % schematics.length);
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 relative">
       <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-[13px] font-bold uppercase text-white/90 flex items-center gap-2">
-            <Zap size={14} className="text-royal-blue" />
-            Technical Schematics
-          </h3>
-          <p className="text-[10px] font-mono text-white/40 uppercase tracking-widest mt-1">Internal Reference Database: LOG-0x7F</p>
+        <div className="flex items-center gap-3">
+          <div>
+            <h3 className="text-[13px] font-bold uppercase text-white/90 flex items-center gap-2">
+              <Zap size={14} className="text-royal-blue" />
+              Technical Schematics
+            </h3>
+            <p className="text-[10px] font-mono text-white/40 uppercase tracking-widest mt-1">Internal Reference Database: LOG-0x7F</p>
+          </div>
+          <button 
+            onClick={() => setShowExplanation(!showExplanation)}
+            className={`p-1.5 rounded-full transition-colors ${showExplanation ? 'bg-royal-blue text-white' : 'text-white/20 hover:text-royal-blue'}`}
+          >
+            <HelpCircle size={14} />
+          </button>
         </div>
         <div className="flex gap-2">
           <button 
@@ -446,6 +457,28 @@ export default function TechnicalSchematics() {
           </button>
         </div>
       </div>
+
+      <AnimatePresence>
+        {showExplanation && (
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 10 }}
+            className="absolute top-16 left-0 right-0 z-[60] bg-black/95 border border-royal-blue/30 p-4 shadow-2xl rounded-sm"
+          >
+             <div className="flex justify-between items-center mb-3">
+                <span className="text-royal-blue font-mono font-bold uppercase text-[10px] tracking-widest">Protocol Documentation</span>
+                <button onClick={() => setShowExplanation(false)} className="text-white/40 hover:text-white"><X size={14}/></button>
+             </div>
+             <p className="text-[10px] font-mono text-white/70 leading-relaxed">
+               These schematics provide a real-time visualization of the cryptographic architecture. 
+               Each module corresponds to a specific stage in the 
+               <span className="text-royal-blue"> Geogaddi Substrate</span>. 
+               Use the arrows to cycle through the encryption pipeline, key exchange, and manifold projection logic.
+             </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div className="relative group">
         <AnimatePresence mode="wait">

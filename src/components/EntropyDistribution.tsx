@@ -1,16 +1,39 @@
-import React, { useMemo, useCallback, useState } from 'react';
+import React, { useMemo, useCallback, useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { RuttEtraScan } from './RuttEtraScan';
+import { SpectralWaterfall } from './SpectralWaterfall';
+import { AreaChart, Area, ResponsiveContainer } from 'recharts';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Maximize2, Cpu, Activity, Zap, HelpCircle } from 'lucide-react';
+import { X, Maximize2, Cpu, Activity, Zap, HelpCircle, TrendingUp, BarChart2, Layers } from 'lucide-react';
 
 interface EntropyDistributionProps {
   entropyData: number[]; // Expecting a long array of bit data
   isLocked?: boolean;
 }
 
+type ViewMode = 'GRID' | 'HILLS' | 'WATERFALL';
+
+const NODE_CONFIG = [
+  { id: 1, label: "[S-BOX DIFFUSION]", math: "SUB_BYTES: GF(2^8)\nσ(x) = inverse(x) ⊕ 0x63" },
+  { id: 2, label: "[GALOIS FIELD Σ]", math: "FIELD: POLY_X8\nΣ_HASH: 0xC710" },
+  { id: 3, label: "[BIT-PLANE PERM]", math: "TRANSPOSE: INVERSE\nδ_PERM: 0.4655" },
+  { id: 4, label: "[KEY SCHED MATRIX]", math: "EXPANSION: 14_ROUNDS\nRCON: [01, 02, 04...]" },
+  { id: 5, label: "[AVALANCHE DELTA]", math: "DIST: HAMMING\nΔ_FLIP: 51 bits" },
+  { id: 6, label: "[STATE ENTROPY]", math: "SHANNON: H(X)\nΣ_BITS: 1024" },
+  { id: 7, label: "[PARITY DRIFT]", math: "DRYSET: VALID\nSEQ_CHECK: ODD" },
+  { id: 8, label: "[ROUND CONSTANTS]", math: "ITER: 0x0E\nCONST: AES_S" },
+  { id: 9, label: "[SUPERSTRING Σ]", math: "GEOGADDI: MANIFOLD\nψ_COORD: 0.77182" },
+];
+
 const EntropyDistribution: React.FC<EntropyDistributionProps> = ({ entropyData, isLocked = false }) => {
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
   const [showInfo, setShowInfo] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>('GRID');
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Process the entropy data into distinct, unique datasets for the 9 nodes
   const hasData = entropyData && entropyData.length > 0;
@@ -19,22 +42,20 @@ const EntropyDistribution: React.FC<EntropyDistributionProps> = ({ entropyData, 
   const deriveColor = useCallback((chunk: number[], seed: number) => {
     if (!hasData) return "#333333";
     
-    // Strict palette: red, indigo, royal blue, sky blue, orange, white
+    // Aesthetic Spectrogram palette (Cool to Warm)
     const palette = [
-      "#FF0000", // pure red
-      "#4B0082", // deep indigo
-      "#0055FF", // royal blue (sharper)
-      "#00D2FF", // sky blue
-      "#FF4500", // OrangeRed (distinct from yellow)
-      "#FFFFFF"  // pure white
+      "#0033FF", // Deep Blue
+      "#00CCFF", // Cyan
+      "#00FF66", // Green
+      "#CCFF00", // Lime
+      "#FFCC00", // Yellow
+      "#FF3300"  // Red
     ];
 
     if (isLocked) {
-      // Locked state uses Red/Orange exclusively
-      return seed % 2 === 0 ? "#FF0000" : "#FF4500";
+      return seed % 2 === 0 ? "#FF3300" : "#FF6600";
     }
     
-    // Map the 9 nodes across the 6 colors cyclically or by specific logic
     const colorMap = [0, 1, 2, 3, 4, 5, 0, 1, 2];
     return palette[colorMap[(seed - 1) % 9]];
   }, [hasData, isLocked]);
@@ -86,263 +107,259 @@ const EntropyDistribution: React.FC<EntropyDistributionProps> = ({ entropyData, 
   }, [entropyData, hasData]);
 
   return (
-    <div className="nasa-panel p-[var(--spacing-phi-2)] flex flex-col gap-2 relative overflow-hidden bg-black border-2 border-white/10 h-full">
-      <div className="flex justify-between items-center border-b border-white/20 pb-1 mb-1">
-        <div className="flex items-center gap-1.5">
+    <div className="nasa-panel p-[var(--spacing-phi-2)] flex flex-col gap-2 relative bg-black border-2 border-white/10 h-auto min-h-[400px] aspect-[4/3] max-h-[85vh] mx-auto overflow-visible shadow-[0_0_20px_rgba(0,0,0,0.5)]">
+      <div className="flex justify-between items-center border-b border-white/20 pb-1 mb-1 relative z-[40]">
+        <div className="flex items-center gap-1.5 font-mono">
           <div className={`w-1 h-3 shadow-[0_0_8px_currentColor] ${!hasData ? 'bg-white/20' : isLocked ? 'bg-nasa-red' : 'bg-telemetry-green'}`} />
-          <span className="text-[11px] font-mono text-white font-bold uppercase tracking-wider">Entropy Distribution [Σ-1024]</span>
-        </div>
-        <div className="flex items-center gap-4">
-          <button 
-            onClick={() => setShowInfo(!showInfo)} 
-            className={`transition-colors p-1 rounded-full ${showInfo ? 'text-pink-500' : 'text-white/20 hover:text-pink-500'}`}
-          >
-            <HelpCircle size={14} />
-          </button>
-          <span className="text-[8px] font-mono text-pink-500 animate-pulse">OVERLAY_MODE: PINK_ACCENT</span>
-          <span className={`text-[8px] font-mono uppercase ${!hasData ? 'text-white/20' : isLocked ? 'text-nasa-red' : 'text-telemetry-green'}`}>
-            {!hasData ? 'Orthographic_Scan: STANDBY' : isLocked ? 'Orthographic_Scan: LOCKED' : 'Orthographic_Scan: DECRYPTED'}
+          <span className="text-[10px] text-white/70 uppercase tracking-widest whitespace-nowrap">
+            SIGNALS: SPECTRAL_FIELD_SCAN [Σ-1024]
           </span>
+          <button 
+            onClick={() => setShowInfo(!showInfo)}
+            className="text-white/20 hover:text-telemetry-green transition-colors ml-1"
+          >
+            <HelpCircle size={10} />
+          </button>
         </div>
+        <div className="flex items-center gap-1.5">
+          <button 
+            onClick={() => setViewMode('GRID')}
+            className={`p-1 rounded transition-colors ${viewMode === 'GRID' ? 'bg-telemetry-green text-black' : 'text-white/40 hover:bg-white/5'}`}
+            title="Grid Waveforms"
+          >
+            <Activity size={12} />
+          </button>
+          <button 
+            onClick={() => setViewMode('HILLS')}
+            className={`p-1 rounded transition-colors ${viewMode === 'HILLS' ? 'bg-telemetry-green text-black' : 'text-white/40 hover:bg-white/5'}`}
+            title="Spectral Density"
+          >
+            <TrendingUp size={12} />
+          </button>
+          <button 
+            onClick={() => setViewMode('WATERFALL')}
+            className={`p-1 rounded transition-colors ${viewMode === 'WATERFALL' ? 'bg-telemetry-green text-black' : 'text-white/40 hover:bg-white/5'}`}
+            title="Orthographic Waterfall"
+          >
+            <Layers size={12} />
+          </button>
+          <span className="text-[8px] font-mono text-pink-500 animate-pulse ml-2 px-1 border border-pink-500/20">PK_MODE</span>
+        </div>
+        <span className={`text-[8px] font-mono uppercase ${!hasData ? 'text-white/20' : isLocked ? 'text-nasa-red' : 'text-telemetry-green'}`}>
+          {!hasData ? 'Orthographic_Scan: STANDBY' : isLocked ? 'Orthographic_Scan: LOCKED' : 'Orthographic_Scan: DECRYPTED'}
+        </span>
       </div>
 
-      <div className="grid grid-cols-3 grid-rows-3 gap-1.5 flex-1 w-full min-h-0">
-        {[
-          { id: 1, label: "[S-BOX DIFFUSION]", math: "SUB_BYTES: GF(2^8)\nσ(x) = inverse(x) ⊕ 0x63" },
-          { id: 2, label: "[GALOIS FIELD Σ]", math: `FIELD: POLY_X8\nΣ_HASH: 0x${Math.floor(Math.random() * 0xFFFF).toString(16).toUpperCase()}` },
-          { id: 3, label: "[BIT-PLANE PERM]", math: `TRANSPOSE: INVERSE\nδ_PERM: 0.${Math.floor(Math.random() * 9000 + 1000)}` },
-          { id: 4, label: "[KEY SCHED MATRIX]", math: "EXPANSION: 14_ROUNDS\nRCON: [01, 02, 04...]" },
-          { id: 5, label: "[AVALANCHE DELTA]", math: `DIST: HAMMING\nΔ_FLIP: ${Math.floor(Math.random() * 128)} bits` },
-          { id: 6, label: "[STATE ENTROPY]", math: "SHANNON: H(X)\nΣ_BITS: 1024" },
-          { id: 7, label: "[PARITY DRIFT]", math: "DRYSET: VALID\nSEQ_CHECK: ODD" },
-          { id: 8, label: "[ROUND CONSTANTS]", math: "ITER: 0x0E\nCONST: AES_S" },
-          { id: 9, label: "[SUPERSTRING Σ]", math: `GEOGADDI: MANIFOLD\nψ_COORD: ${Math.random().toFixed(5)}` },
-        ].map((node) => {
-          const chunk = getTransformedChunk(node.id);
-          const activeColor = deriveColor(chunk, node.id);
-          
-          return (
+      <div className="flex-1 min-h-[0] relative">
+        <AnimatePresence>
+          {showInfo && (
             <motion.div 
-              key={node.id}
-              whileHover={{ scale: 1.02, backgroundColor: 'rgba(255, 0, 255, 0.08)' }}
-              onClick={(e) => {
-                e.stopPropagation();
-                if (hasData) setExpandedIndex(node.id);
-              }}
-              className="relative cursor-pointer group border border-white/5 bg-white/2 flex flex-col z-10"
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="absolute top-2 left-2 right-2 z-[50] bg-black/95 border border-telemetry-green/30 p-3 shadow-2xl rounded-sm text-[9px] font-mono leading-relaxed"
             >
-              <div className="flex-1 min-h-0 relative pointer-events-none">
-                <RuttEtraScan 
-                  data={chunk} 
-                  label={node.label} 
-                  color={activeColor} 
-                  intensity={hasData ? 1 : 0.2} 
-                />
-                
-                {/* Pixel Nodes Representation - Animated bits */}
-                {hasData && (
-                  <div className="absolute inset-x-1 inset-y-2 grid grid-cols-16 grid-rows-16 gap-px opacity-60">
-                    {Array.from({ length: 256 }).map((_, i) => (
-                      <motion.div 
-                        key={i} 
-                        initial={{ opacity: 0 }}
-                        animate={{ 
-                          opacity: Math.random() > 0.9 ? [0, 1, 0] : 0,
-                          backgroundColor: '#FF00FF'
-                        }}
-                        transition={{ 
-                          duration: Math.random() * 2 + 1, 
-                          repeat: Infinity,
-                          delay: Math.random() * 2
-                        }}
-                        className="w-full h-full rounded-full scale-[0.5]" 
-                      />
-                    ))}
-                  </div>
-                )}
+              <div className="flex justify-between items-start mb-2">
+                <span className="text-telemetry-green font-bold uppercase tracking-tighter">Signal Interpretation</span>
+                <button onClick={() => setShowInfo(false)} className="text-white/40 hover:text-white"><X size={12}/></button>
               </div>
-              
-              <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                <Maximize2 size={8} className="text-pink-500" />
+              <p className="text-white/70 mb-2">
+                Visualization of the <span className="text-telemetry-green font-bold">Spectral Entropy</span> across 9 distinct bit-plane channels. 
+              </p>
+              <div className="bg-white/5 p-2 border-l border-telemetry-green/30 space-y-1">
+                <p>• <span className="text-telemetry-green font-bold">Waveforms:</span> Real-time bit-drift via Rutt-Etra scanline projection.</p>
+                <p>• <span className="text-royal-blue font-bold">Hills & Valleys:</span> Integrated temporal density showing manifold convergence.</p>
               </div>
-
-              {hasData && (
-                <div className="absolute top-4 right-1 text-[6px] font-mono text-pink-500 text-right pointer-events-none drop-shadow-[0_0_2px_rgba(255,0,255,0.5)] leading-tight whitespace-pre bg-black/40 px-1 py-0.5 rounded">
-                  {node.math}
-                </div>
-              )}
             </motion.div>
-          );
-        })}
+          )}
+        </AnimatePresence>
+
+        {viewMode === 'HILLS' ? (
+          <div className="w-full h-full p-2 bg-black/40 border border-white/5 relative">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={entropyData.map((v, i) => ({ i, v }))}>
+                <defs>
+                  <linearGradient id="distGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor={isLocked ? '#FF3300' : '#00FF41'} stopOpacity={0.4}/>
+                    <stop offset="95%" stopColor={isLocked ? '#FF3300' : '#00FF41'} stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <Area 
+                  type="monotone" 
+                  dataKey="v" 
+                  stroke={isLocked ? '#FF3300' : '#00FF41'} 
+                  strokeWidth={1.5}
+                  fill="url(#distGradient)" 
+                  isAnimationActive={false}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+            <div className="absolute bottom-2 left-2 right-2 flex justify-between text-[7px] font-mono text-white/20 uppercase tracking-tighter">
+              <span>Entropy Floor</span>
+              <span>Vector Peak: {(Math.max(...entropyData) / 255 * 1024).toFixed(0)} Σ</span>
+            </div>
+          </div>
+        ) : viewMode === 'WATERFALL' ? (
+          <div className="w-full h-full border border-white/5 relative">
+            <SpectralWaterfall 
+              data={entropyData.slice(0, 64).map(v => (v + 2) / 4)} 
+              isLocked={isLocked}
+            />
+          </div>
+        ) : (
+          <div className="grid grid-cols-3 grid-rows-3 gap-2 h-full w-full">
+            {NODE_CONFIG.map((node) => {
+              const chunk = getTransformedChunk(node.id);
+              const activeColor = deriveColor(chunk, node.id);
+              
+              return (
+                <motion.div 
+                  key={node.id}
+                  whileHover={{ scale: 1.02, backgroundColor: 'rgba(255, 0, 255, 0.08)' }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (hasData) setExpandedIndex(node.id);
+                  }}
+                  className="relative cursor-pointer group border border-white/10 bg-white/5 flex flex-col overflow-hidden min-h-0"
+                >
+                  <div className="flex-1 min-h-0 relative pointer-events-none">
+                    <RuttEtraScan 
+                      data={chunk} 
+                      label={node.label} 
+                      color={activeColor} 
+                      intensity={hasData ? 1 : 0.2} 
+                    />
+                  </div>
+                  
+                  <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                    <Maximize2 size={8} className="text-pink-500" />
+                  </div>
+
+                  <div className="absolute bottom-1 left-1 right-1 flex justify-between items-end pointer-events-none">
+                    <span className="text-[6px] font-mono text-white/40 uppercase truncate">{node.label}</span>
+                    {hasData && (
+                      <span className="text-[5px] font-mono text-pink-500/60 leading-none">
+                         {node.math.split('\n')[1]}
+                      </span>
+                    )}
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       <AnimatePresence>
-        {expandedIndex !== null && (
+        {mounted && expandedIndex !== null && createPortal(
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-8 bg-black/90 backdrop-blur-sm"
+            className="fixed inset-0 z-[9999] flex items-center justify-center p-2 sm:p-4 bg-black/95 backdrop-blur-xl"
+            onClick={() => setExpandedIndex(null)}
           >
             <motion.div 
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
-              className="w-full max-w-5xl h-fit max-h-[95vh] md:h-[80vh] bg-black border-2 border-pink-500/50 relative overflow-hidden shadow-[0_0_50px_rgba(255,0,255,0.2)] flex flex-col rounded-sm"
+              exit={{ scale: 0.9, y: 20 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-5xl h-fit max-h-[98vh] bg-black border-2 border-pink-500/50 relative overflow-hidden shadow-[0_0_100px_rgba(255,0,255,0.4)] flex flex-col rounded-sm"
             >
               <div className="h-10 border-b border-pink-500/30 flex items-center justify-between px-4 bg-pink-500/10 flex-shrink-0">
                 <div className="flex items-center gap-3 overflow-hidden">
                   <Activity size={16} className="text-pink-500 flex-shrink-0" />
-                  <span className="font-mono text-[10px] md:text-xs text-white uppercase font-bold tracking-widest truncate">
-                    Diagnostic: {expandedIndex && [
-                      "", "[S-BOX DIFFUSION]", "[GALOIS FIELD Σ]", "[BIT-PLANE PERM]", "[KEY SCHED MATRIX]", 
-                      "[AVALANCHE DELTA]", "[STATE ENTROPY]", "[PARITY DRIFT]", "[ROUND CONSTANTS]", "[SUPERSTRING Σ]"
-                    ][expandedIndex]}
+                  <span className="font-mono text-[10px] md:text-sm text-white uppercase font-bold tracking-[0.2em] truncate">
+                    CHANNEL_DIAGNOSTIC: {expandedIndex && NODE_CONFIG[expandedIndex-1].label}
                   </span>
                 </div>
-                <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                <div className="flex items-center gap-4">
                   <button 
                     onClick={() => setShowInfo(!showInfo)}
-                    className={`transition-colors p-1.5 rounded-full ${showInfo ? 'bg-pink-500 text-white' : 'text-pink-500 hover:bg-pink-500/20'}`}
-                    title="Toggle Signal Information"
+                    className={`transition-colors p-1 rounded-full ${showInfo ? 'text-pink-500 bg-pink-500/20' : 'text-white/40 hover:text-pink-500'}`}
                   >
                     <HelpCircle size={18} />
                   </button>
                   <button 
-                    onClick={() => {
-                      setExpandedIndex(null);
-                      setShowInfo(false);
-                    }}
-                    className="text-pink-500 hover:text-white transition-colors p-1"
+                    onClick={() => setExpandedIndex(null)}
+                    className="text-white/40 hover:text-pink-500 transition-colors p-1"
                   >
-                    <X size={20} />
+                    <X size={24} />
                   </button>
                 </div>
               </div>
 
-              <div className="flex-1 p-3 md:p-6 min-h-0 overflow-y-auto custom-scrollbar relative">
-                {/* Info Overlay Panel */}
-                <AnimatePresence>
-                  {showInfo && (
-                    <motion.div
-                      initial={{ opacity: 0, x: 20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: 20 }}
-                      className="absolute top-2 right-2 md:top-6 md:right-6 w-[280px] md:w-80 bg-black/95 border border-pink-500/40 p-3 md:p-4 z-[110] backdrop-blur-xl shadow-[0_0_30px_rgba(255,0,255,0.2)] rounded-sm"
-                    >
-                      <button 
-                        onClick={() => setShowInfo(false)}
-                        className="absolute top-2 right-2 text-white/30 hover:text-white transition-colors"
-                      >
-                        <X size={12} />
-                      </button>
-                      <h3 className="text-pink-500 font-mono text-[10px] font-bold mb-2 uppercase tracking-widest flex items-center gap-2">
-                        <Zap size={10} /> Signal Interpretation
-                      </h3>
-                      <div className="space-y-3 text-[9px] font-mono text-white/70 leading-relaxed">
-                        <p>
-                          Tracing orthographic waveforms through the <span className="text-pink-400">Rutt-Etra</span> projection space reveals the geometric fingerprints of our encryption algorithm.
-                        </p>
-                        <div className="bg-pink-500/10 p-2 border-l-2 border-pink-500">
-                          <p className="text-pink-300 mb-1 font-bold">LEGEND:</p>
-                          <ul className="list-none space-y-1">
-                            <li>• <span className="text-pink-500 font-bold">Dynamic Nodes:</span> Contrasting vertex telemetry</li>
-                            <li>• <span className="text-white">Wave Displacement:</span> Entropy intensity (H)</li>
-                            <li>• <span className="text-pink-300">Overlay Math:</span> Live Galois transform metrics</li>
-                          </ul>
-                        </div>
-                        <div className="pt-2 border-t border-pink-500/20">
-                          <p className="text-white/60 mb-2 font-bold uppercase text-[8px]">Spectral Mapping:</p>
-                          <div className="flex gap-1.5 h-1.5">
-                             <div className="flex-1 bg-[#FF0000] rounded-full" title="Red" />
-                             <div className="flex-1 bg-[#4B0082] rounded-full" title="Indigo" />
-                             <div className="flex-1 bg-[#0055FF] rounded-full" title="Royal Blue" />
-                             <div className="flex-1 bg-[#00D2FF] rounded-full" title="Sky Blue" />
-                             <div className="flex-1 bg-[#FF4500] rounded-full" title="Orange" />
-                             <div className="flex-1 bg-[#FFFFFF] rounded-full" title="White" />
-                          </div>
-                        </div>
-                        <p className="text-[8px] text-white/30 italic">
-                          Each color resonance corresponds to a specific manifold depth in the 2^256 keyspace.
-                        </p>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-
-                <div className="grid grid-cols-1 md:grid-cols-4 h-full gap-4 md:gap-6 min-h-0">
-                  <div className="md:col-span-3 border border-pink-500/20 bg-white/5 relative rounded backdrop-blur-md h-[40vh] md:h-full min-h-[300px] overflow-hidden flex flex-col">
-                    <div className="flex-1 bg-black/40">
-                      <RuttEtraScan 
-                        data={getTransformedChunk(expandedIndex!)} 
-                        label="EXPANDED_FIELD_DIAGNOSTIC" 
-                        color={deriveColor(getTransformedChunk(expandedIndex!), expandedIndex!)} 
-                        intensity={1.1} 
-                      />
-                    </div>
-                    
-                    {/* Detailed Math Overlay in Popup */}
-                    <div className="absolute top-2 right-2 md:top-4 md:right-6 text-[8px] md:text-[10px] font-mono text-pink-300 text-right space-y-1 md:space-y-2 pointer-events-none drop-shadow-md">
-                      <div className="bg-black/90 p-2 border border-pink-500/30 rounded backdrop-blur-md">
-                        <p className="text-pink-500 mb-1 border-b border-pink-500/20 pb-1">ALGO_PARAMETERS</p>
-                        <p>MOD: 0x{Math.floor(Math.random() * 0xFFFFFF).toString(16).toUpperCase()}</p>
-                        <p>XOR: 0x51E{Math.floor(Math.random() * 9)}</p>
-                        <p className="hidden md:block">SUB: SBOX_GF256</p>
-                      </div>
-                      <div className="bg-black/90 p-2 border border-pink-500/30 rounded backdrop-blur-md">
-                        <p className="text-pink-500 mb-1 border-b border-pink-500/20 pb-1">ENTROPY_METRICS</p>
-                        <p>SHANNON_H: 7.9942</p>
-                        <p>MIN_ENT: 0.9882</p>
-                        <p>HAM_WT: {440 + Math.floor(Math.random() * 20)}</p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="md:col-span-1 flex flex-col gap-4 min-h-0">
-                    <div className="flex-1 nasa-panel border-pink-500/30 p-4 bg-pink-500/5 flex flex-col gap-4 overflow-y-auto overflow-x-hidden">
-                      <div className="flex items-center gap-2 text-pink-500 flex-shrink-0">
-                        <Cpu size={14} />
-                        <span className="text-[11px] font-mono font-bold tracking-tighter">ALGO_SUBSYSTEM_LOGS</span>
-                      </div>
-                      <div className="text-[9px] md:text-[10px] font-mono text-white/90 space-y-4">
-                        <div className="space-y-2">
-                          <p className="text-pink-400 font-bold">STATE_LOGS:</p>
-                          <ul className="list-none space-y-1 text-white/50 text-[8px] md:text-[9px]">
-                            <li className="flex gap-2"><span>{'>'}</span> <span className="break-all">INIT_SYMMETRIC_EXPANSION</span></li>
-                            <li className="flex gap-2"><span className="text-telemetry-green">✔</span> <span>GALOIS_HEAP_READY</span></li>
-                            <li className="flex gap-2"><span className="text-telemetry-green">✔</span> <span>BIT_SHIFT_LOCKED</span></li>
-                            <li className="flex gap-2"><span>{'>'}</span> <span>V_NORM: {Math.random().toFixed(4)}</span></li>
-                            <li className="flex gap-2"><span>{'>'}</span> <span>SYNC: ACTIVE</span></li>
-                          </ul>
-                        </div>
-                        <div className="pt-4 border-t border-white/10">
-                          <p className="text-pink-400 mb-2 font-bold uppercase text-[8px]">Processor Resonance:</p>
-                          <div className="grid grid-cols-4 gap-1.5 h-12">
-                            {Array.from({length: 12}).map((_, i) => (
-                              <motion.div 
-                                key={i} 
-                                animate={{ 
-                                  height: [10, 24, 10],
-                                  opacity: [0.4, 1, 0.4]
-                                }}
-                                transition={{ duration: 1 + Math.random(), repeat: Infinity }}
-                                className={`w-full rounded-sm ${Math.random() > 0.4 ? 'bg-pink-500' : 'bg-white/10'}`} 
-                              />
-                            ))}
-                          </div>
-                        </div>
-                        <div className="pt-2">
-                          <div className="p-2 border border-pink-500/20 bg-pink-500/5 rounded text-[8px] text-pink-400/80 leading-relaxed italic">
-                            System manifesting quantum tunneling artifacts in the lower bit-planes.
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+              <div className="flex-1 p-4 md:p-8 overflow-y-auto custom-scrollbar flex flex-col md:flex-row gap-6">
+                <div className="flex-[3] min-h-[300px] md:min-h-0 bg-white/2 border border-pink-500/20 relative rounded overflow-hidden">
+                  <RuttEtraScan 
+                    data={getTransformedChunk(expandedIndex)} 
+                    color={deriveColor(getTransformedChunk(expandedIndex), expandedIndex)} 
+                    intensity={1.2} 
+                  />
+                  <div className="absolute top-4 left-4 flex flex-col gap-1 pointer-events-none">
+                    <span className="text-[8px] font-mono text-pink-500/80 bg-black/80 px-2 py-0.5 border border-pink-500/20">LIVE_TELEMETRY</span>
+                    <span className="text-[10px] font-mono text-white/50 tracking-tighter">COORDS: {Math.random().toFixed(4)}, {Math.random().toFixed(4)}</span>
                   </div>
                 </div>
+
+                <div className="flex-1 flex flex-col gap-6 min-w-[260px]">
+                  <section className="space-y-3">
+                    <div className="flex items-center gap-2 border-b border-pink-500/30 pb-1">
+                      <Cpu size={14} className="text-pink-500" />
+                      <h4 className="text-[10px] font-mono font-bold text-white uppercase tracking-wider">Logic Substrate</h4>
+                    </div>
+                    <pre className="text-[10px] font-mono text-pink-400 bg-pink-500/5 p-3 rounded border border-pink-500/10 whitespace-pre-wrap leading-relaxed">
+                      {expandedIndex && NODE_CONFIG[expandedIndex-1].math}
+                    </pre>
+                  </section>
+
+                  <section className="space-y-3 flex-1">
+                     <div className="flex items-center gap-2 border-b border-pink-500/30 pb-1">
+                      <TrendingUp size={14} className="text-telemetry-green" />
+                      <h4 className="text-[10px] font-mono font-bold text-white uppercase tracking-wider">Stability Analysis</h4>
+                    </div>
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="bg-white/5 p-2 border border-white/10 rounded">
+                           <p className="text-[7px] text-white/30 uppercase mb-1">Entropy H</p>
+                           <p className="text-[12px] font-mono text-telemetry-green">7.9942</p>
+                        </div>
+                        <div className="bg-white/5 p-2 border border-white/10 rounded">
+                           <p className="text-[7px] text-white/30 uppercase mb-1">Drift Δ</p>
+                           <p className="text-[12px] font-mono text-nasa-red">0.021</p>
+                        </div>
+                      </div>
+                      
+                      <div className="pt-2">
+                        <p className="text-[8px] text-white/40 mb-2 uppercase">Spectral Distribution</p>
+                        <div className="flex gap-1 h-2">
+                           <div className="flex-1 bg-royal-blue rounded-full" />
+                           <div className="flex-1 bg-cyan rounded-full" />
+                           <div className="flex-1 bg-telemetry-green rounded-full" />
+                           <div className="flex-1 bg-amber rounded-full" />
+                           <div className="flex-1 bg-nasa-red rounded-full" />
+                        </div>
+                      </div>
+                    </div>
+                  </section>
+
+                  <button 
+                    onClick={() => setExpandedIndex(null)}
+                    className="mt-auto py-3 bg-pink-500/10 hover:bg-pink-500/20 text-pink-500 border border-pink-500/50 text-[10px] font-mono font-bold uppercase tracking-[0.3em] transition-all"
+                  >
+                    Close Diagnostic
+                  </button>
+                </div>
               </div>
+
+              {/* HUD scanlines */}
+              <div className="absolute inset-0 pointer-events-none opacity-20 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[length:100%_2px,3px_100%]" />
             </motion.div>
-          </motion.div>
-        )}
+          </motion.div>,
+          document.body
+        ) }
       </AnimatePresence>
+
 
       <div className="flex justify-between items-center mt-1 pt-1 border-t border-white/10 bg-white/5 px-1.5 py-0.5">
         <div className="flex flex-col">

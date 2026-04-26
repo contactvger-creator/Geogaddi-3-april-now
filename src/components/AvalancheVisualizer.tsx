@@ -1,5 +1,6 @@
 import React, { useMemo, useEffect, useState } from 'react';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
+import { HelpCircle, X } from 'lucide-react';
 
 interface AvalancheVisualizerProps {
   input: string;
@@ -7,6 +8,7 @@ interface AvalancheVisualizerProps {
 }
 
 export default function AvalancheVisualizer({ input, gridSize = 12 }: AvalancheVisualizerProps) {
+  const [showInfo, setShowInfo] = useState(false);
   // We simulate the bits by hashing the input into a seed
   const bits = useMemo(() => {
     const seed = input.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
@@ -67,9 +69,35 @@ export default function AvalancheVisualizer({ input, gridSize = 12 }: AvalancheV
           <div className="flex items-center gap-1.5">
             <div className="w-1 h-3 bg-nasa-red shadow-[0_0_8px_#fc3d21]" />
             <span className="text-[11px] font-mono text-white font-bold uppercase tracking-wider">Avalanche Bit HUD</span>
+            <button 
+              onClick={() => setShowInfo(!showInfo)}
+              className="text-white/20 hover:text-nasa-red transition-colors ml-1"
+            >
+              <HelpCircle size={10} />
+            </button>
           </div>
           <span className="text-[8px] font-mono text-telemetry-green uppercase animate-pulse font-bold">● BIT_SCAN_ACTIVE</span>
         </div>
+
+        <AnimatePresence>
+          {showInfo && (
+            <motion.div 
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="absolute top-10 left-4 right-4 z-50 bg-black/95 border border-nasa-red/30 p-3 shadow-2xl rounded-sm text-[9px] font-mono leading-relaxed pointer-events-auto"
+            >
+              <div className="flex justify-between items-start mb-2">
+                <span className="text-nasa-red font-bold uppercase tracking-tighter">Avalanche Telemetry</span>
+                <button onClick={() => setShowInfo(false)} className="text-white/40 hover:text-white"><X size={12}/></button>
+              </div>
+              <p className="text-white/70">
+                Visualizing the <span className="text-nasa-red">Avalanche Effect</span>. Every character change should flip roughly 50% of the bits (represented by blue/green squares). 
+                The <span className="text-telemetry-green">Green Flashes</span> indicate high bit flipping probability.
+              </p>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <div className="flex-1" />
 
