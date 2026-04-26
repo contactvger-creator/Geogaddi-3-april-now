@@ -49,13 +49,13 @@ export const SpectralWaterfall: React.FC<SpectralWaterfallProps> = ({
         if (history.length > maxHistory) history.pop();
       }
 
-      const perspectiveX = width * 0.25;
-      const perspectiveY = height * 0.15;
-      const drawWidth = width * 0.65;
-      const drawHeight = height * 0.6;
+      const perspectiveX = width * 0.2;
+      const perspectiveY = height * 0.1;
+      const drawWidth = width * 0.6;
+      const drawHeight = height * 0.45;
       
       const offsetX = (width - drawWidth) / 2 + perspectiveX * 0.5;
-      const offsetY = (height - drawHeight) / 2 + perspectiveY;
+      const offsetY = (height - drawHeight) / 2 + perspectiveY * 1.5;
 
       ctx.save();
       
@@ -81,12 +81,15 @@ export const SpectralWaterfall: React.FC<SpectralWaterfallProps> = ({
 
       // Heatmap color function (Blue -> Cyan -> Green -> Yellow -> Red)
       const getHeatmapColor = (val: number, alpha: number) => {
-        if (isLocked) return `rgba(255, ${Math.floor(51 * (1-val))}, 0, ${alpha})`;
+        if (isLocked) return `rgba(255, ${Math.floor(100 * (1-val))}, 50, ${alpha})`;
         
-        if (val < 0.25) return `rgba(0, ${Math.floor(val * 4 * 255)}, 255, ${alpha})`;
-        if (val < 0.5) return `rgba(0, 255, ${Math.floor((1 - (val - 0.25) * 4) * 255)}, ${alpha})`;
-        if (val < 0.75) return `rgba(${Math.floor((val - 0.5) * 4 * 255)}, 255, 0, ${alpha})`;
-        return `rgba(255, ${Math.floor((1 - (val - 0.75) * 4) * 255)}, 0, ${alpha})`;
+        // Jet-like palette with bright peaks
+        if (val < 0.2) return `rgba(0, 0, ${Math.floor(val * 5 * 255)}, ${alpha})`;
+        if (val < 0.4) return `rgba(0, ${Math.floor((val-0.2) * 5 * 255)}, 255, ${alpha})`;
+        if (val < 0.6) return `rgba(0, 255, ${Math.floor((1 - (val-0.4) * 5) * 255)}, ${alpha})`;
+        if (val < 0.8) return `rgba(${Math.floor((val-0.6) * 5 * 255)}, 255, 0, ${alpha})`;
+        if (val < 0.95) return `rgba(255, ${Math.floor((1 - (val-0.8) * 6.6) * 255)}, 0, ${alpha})`;
+        return `rgba(255, 255, 255, ${alpha})`; // Pure white peaks
       };
 
       // Draw spectral lines back to front
@@ -133,11 +136,11 @@ export const SpectralWaterfall: React.FC<SpectralWaterfallProps> = ({
       ctx.restore();
 
       // UI Labels for axes
-      ctx.font = '8px monospace';
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-      ctx.fillText('FREQUENCY (Hz)', offsetX + drawWidth + 5, offsetY + drawHeight);
-      ctx.fillText('AMPLITUDE (Σ)', offsetX - perspectiveX - 20, offsetY - perspectiveY);
-      ctx.fillText('TIME (ms)', offsetX - 10, offsetY + drawHeight + 15);
+      ctx.font = '6px monospace';
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+      ctx.fillText('FREQ', offsetX + drawWidth - 20, offsetY + drawHeight + 5);
+      ctx.fillText('AMP', offsetX - perspectiveX + 5, offsetY - perspectiveY - 5);
+      ctx.fillText('TIME', offsetX, offsetY + drawHeight + 10);
 
       animationFrame = requestAnimationFrame(render);
     };

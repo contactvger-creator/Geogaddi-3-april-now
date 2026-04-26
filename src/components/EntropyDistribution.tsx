@@ -107,7 +107,7 @@ const EntropyDistribution: React.FC<EntropyDistributionProps> = ({ entropyData, 
   }, [entropyData, hasData]);
 
   return (
-    <div className="nasa-panel p-[var(--spacing-phi-2)] flex flex-col gap-2 relative bg-black border-2 border-white/10 h-auto min-h-[400px] aspect-[4/3] max-h-[85vh] mx-auto overflow-visible shadow-[0_0_20px_rgba(0,0,0,0.5)]">
+    <div className="nasa-panel p-[var(--spacing-phi-2)] flex flex-col gap-2 relative bg-black border-2 border-white/10 h-auto min-h-[350px] sm:min-h-[400px] w-full max-w-5xl md:aspect-[4/3] max-h-[90vh] mx-auto overflow-visible shadow-[0_0_20px_rgba(0,0,0,0.5)]">
       <div className="flex justify-between items-center border-b border-white/20 pb-1 mb-1 relative z-[40]">
         <div className="flex items-center gap-1.5 font-mono">
           <div className={`w-1 h-3 shadow-[0_0_8px_currentColor] ${!hasData ? 'bg-white/20' : isLocked ? 'bg-nasa-red' : 'bg-telemetry-green'}`} />
@@ -218,16 +218,14 @@ const EntropyDistribution: React.FC<EntropyDistributionProps> = ({ entropyData, 
                   whileHover={{ scale: 1.02, backgroundColor: 'rgba(255, 0, 255, 0.08)' }}
                   onClick={(e) => {
                     e.stopPropagation();
-                    if (hasData) setExpandedIndex(node.id);
+                    setExpandedIndex(node.id);
                   }}
                   className="relative cursor-pointer group border border-white/10 bg-white/5 flex flex-col overflow-hidden min-h-0"
                 >
                   <div className="flex-1 min-h-0 relative pointer-events-none">
-                    <RuttEtraScan 
-                      data={chunk} 
-                      label={node.label} 
-                      color={activeColor} 
-                      intensity={hasData ? 1 : 0.2} 
+                    <SpectralWaterfall 
+                      data={chunk.map(v => (v + 2) / 4)} 
+                      isLocked={isLocked}
                     />
                   </div>
                   
@@ -235,10 +233,10 @@ const EntropyDistribution: React.FC<EntropyDistributionProps> = ({ entropyData, 
                     <Maximize2 size={8} className="text-pink-500" />
                   </div>
 
-                  <div className="absolute bottom-1 left-1 right-1 flex justify-between items-end pointer-events-none">
-                    <span className="text-[6px] font-mono text-white/40 uppercase truncate">{node.label}</span>
+                  <div className="absolute bottom-1 left-1 right-1 flex justify-between items-end pointer-events-none z-10">
+                    <span className="text-[6px] font-mono text-white/40 uppercase truncate bg-black/60 px-1">{node.label}</span>
                     {hasData && (
-                      <span className="text-[5px] font-mono text-pink-500/60 leading-none">
+                      <span className="text-[5px] font-mono text-pink-500/60 leading-none bg-black/60 px-1">
                          {node.math.split('\n')[1]}
                       </span>
                     )}
@@ -256,7 +254,7 @@ const EntropyDistribution: React.FC<EntropyDistributionProps> = ({ entropyData, 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[9999] flex items-center justify-center p-2 sm:p-4 bg-black/95 backdrop-blur-xl"
+            className="fixed inset-0 z-[10000] flex items-center justify-center p-2 sm:p-4 bg-black/95 backdrop-blur-xl"
             onClick={() => setExpandedIndex(null)}
           >
             <motion.div 
