@@ -1,0 +1,11 @@
+{
+  "name": "Remix: Geogaddi 2 April 25",
+  "description": "5-Channel Cryptographic Steganography System. Features 5120-bit security, WebGPU-accelerated superstring video compression, and real-time NASA telemetry.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "Cryptography",
+    "Steganography",
+    "Signal Processing",
+    "Video Compression"
+  ]
+}
