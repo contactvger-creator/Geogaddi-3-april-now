@@ -5,13 +5,17 @@ interface RuttEtraScanProps {
   label: string;
   color?: string;
   intensity?: number;
+  lines?: number;
+  pointsPerLine?: number;
 }
 
 export const RuttEtraScan: React.FC<RuttEtraScanProps> = ({ 
   data, 
   label, 
   color = '#0066FF',
-  intensity = 1.0 
+  intensity = 1.0,
+  lines = 8,
+  pointsPerLine = 24
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -41,8 +45,6 @@ export const RuttEtraScan: React.FC<RuttEtraScanProps> = ({
 
     let animationFrame: number;
     const padding = 20; // Increased padding
-    const lines = 8; // Number of scanlines
-    const pointsPerLine = 24;
     
     const render = (time: number) => {
       ctx.clearRect(0, 0, width, height);
